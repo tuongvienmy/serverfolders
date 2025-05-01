@@ -2,7 +2,7 @@
 
 public class File : FolderItem
 {
-    public StorageId StorageId { get; protected set; } = string.Empty;
+    public StorageId StorageId { get; protected set; }
     public long Size { get; protected set; } = 0;
     public string MimeType { get; protected set; } = string.Empty;    
     private File(string name, string mimeType, StorageId storageId) : base(name)
@@ -13,13 +13,13 @@ public class File : FolderItem
     
     public static File Add(string name, string mimeType, byte[] data, IStorageProvider storageProvider)
     {        
-        string storageId = storageProvider.StoreAsync(data).GetAwaiter().GetResult();
+        StorageId storageId = storageProvider.StoreAsync(data).GetAwaiter().GetResult();
 
         return new File(name, mimeType, storageId);
     }
     public static File Add(string name, string mimeType, Stream data, IStorageProvider storageProvider)
     {
-        string storageId = storageProvider.StoreStreamAsync(data).GetAwaiter().GetResult();
+        StorageId storageId = storageProvider.StoreStreamAsync(data).GetAwaiter().GetResult();
 
         return new File(name, mimeType, storageId);
     }
