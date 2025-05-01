@@ -4,20 +4,20 @@ public class File : FolderItem
 {
     public StorageId StorageId { get; protected set; }
     public long Size { get; protected set; } = 0;
-    public string MimeType { get; protected set; } = string.Empty;    
-    private File(string name, string mimeType, StorageId storageId) : base(name)
+    public MimeType MimeType { get; protected set; }
+    private File(string name, MimeType mimeType, StorageId storageId) : base(name)
     {
         MimeType = mimeType;
         StorageId = storageId;
     }
     
-    public static File Add(string name, string mimeType, byte[] data, IStorageProvider storageProvider)
+    public static File Add(string name, MimeType mimeType, byte[] data, IStorageProvider storageProvider)
     {        
         StorageId storageId = storageProvider.StoreAsync(data).GetAwaiter().GetResult();
 
         return new File(name, mimeType, storageId);
     }
-    public static File Add(string name, string mimeType, Stream data, IStorageProvider storageProvider)
+    public static File Add(string name, MimeType mimeType, Stream data, IStorageProvider storageProvider)
     {
         StorageId storageId = storageProvider.StoreStreamAsync(data).GetAwaiter().GetResult();
 
@@ -30,7 +30,7 @@ public class File : FolderItem
 
         FileStream stream = fileInfo.OpenRead();
 
-        return Add(fileInfo.Name, Core.MimeType.FromFileName(fileInfo.Extension), stream, storageProvider);
+        return Add(fileInfo.Name, MimeType.FromFileName(fileInfo.Extension), stream, storageProvider);
     }
     
 }

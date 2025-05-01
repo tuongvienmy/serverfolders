@@ -1,6 +1,5 @@
-﻿namespace ServerFolderTests;
+﻿namespace Folders.Core;
 
-using Folders.Core;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 

@@ -21,8 +21,8 @@ public abstract class FolderItem
     public void Rename(string newName)
     {
         ArgumentNullException.ThrowIfNullOrWhiteSpace(newName, nameof(newName));
-        //if (Parent != null && Parent.Items.Any(i => i.Name == newName))
-        //    throw new InvalidOperationException("Name already exists in parent");
+        if (Parent != null && Parent.Items.Any(i => i.Name == newName))
+            throw new InvalidOperationException("Name already exists in parent");
         Name = newName;
         ModifiedAt = DateTime.UtcNow;
     }
