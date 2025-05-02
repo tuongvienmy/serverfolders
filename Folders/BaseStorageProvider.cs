@@ -2,15 +2,18 @@
 public abstract class BaseStorageProvider: IStorageProvider
 {
     protected virtual string Prefix { get; set; } = string.Empty;
-    protected string GenerateKey()
+    protected string GenerateStorageId()
     {
         var now = DateTime.UtcNow;
         var guid = Guid.NewGuid().ToString("N");
         var path = string.IsNullOrEmpty(Prefix)
             ? $"{now:yyyy/MM/dd}/"
-            : $"{Prefix}/{now:yyyy/MM/dd}/";        
+            : $"{Prefix}/{now:yyyy/MM/dd}/";
+        if (string.IsNullOrEmpty(ProviderKey))
+            return $"{path}{guid}";
+        else
+            return $"{ProviderKey}{path}{guid}";
 
-        return $"{path}{guid}";
     }
     public string ProviderKey { get; protected set; } = string.Empty;
     public abstract Task<StorageId> StoreAsync(byte[] data);

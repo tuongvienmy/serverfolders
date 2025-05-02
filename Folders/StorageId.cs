@@ -69,6 +69,14 @@ public readonly struct StorageId : IEquatable<StorageId>
     public bool Equals(StorageId other) => _uri.Equals(other._uri);
     public override bool Equals(object? obj) => obj is StorageId other && Equals(other);
     public override int GetHashCode() => _uri.GetHashCode();
+    internal string GetBucketNameFrom()
+    {
+        if (Provider != "s3")
+            throw new InvalidOperationException("StorageId is not an S3 ID.");
+
+        // Grant To do: Get the bucket name from the S3 ID
+        return Path.Split('/')[0];
+    }
 }
 
 
