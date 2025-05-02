@@ -30,7 +30,7 @@ public class Folder : FolderItem
 
         return folder;
     }    
-    public File AddFile(string name, string mimeType, Stream dataStream, IStorageProvider storageProvider)
+    public File AddFile(string name, MimeType mimeType, Stream dataStream, IStorageProvider storageProvider)
     {
         if (_items.ContainsKey(name))
             throw new InvalidOperationException($"A file named '{name}' already exists.");
@@ -40,7 +40,7 @@ public class Folder : FolderItem
         ModifiedAt = DateTime.UtcNow;
         return file;
     }
-    public File AddFile(string name, string mimeType, byte[] data, IStorageProvider storageProvider)
+    public File AddFile(string name, MimeType mimeType, byte[] data, IStorageProvider storageProvider)
     {
         if (_items.ContainsKey(name))
             throw new InvalidOperationException($"A file named '{name}' already exists.");
