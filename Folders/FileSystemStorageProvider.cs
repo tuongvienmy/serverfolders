@@ -5,12 +5,11 @@ public class FileSystemStorageProvider: BaseStorageProvider
     {
         Prefix = basePath;
         Directory.CreateDirectory(Prefix);
-        ProviderKey = "FileSystem";
     }
 
     public override async Task<StorageId> StoreAsync(byte[] data)
     {        
-        var filePath = GenerateKey();        
+        var filePath = GenerateStorageId();
 
         Directory.CreateDirectory(System.IO.Path.GetDirectoryName(filePath) ?? string.Empty); // Ensure the directory exists
 
@@ -25,7 +24,7 @@ public class FileSystemStorageProvider: BaseStorageProvider
 
     public override async Task<StorageId> StoreStreamAsync(Stream dataStream)
     {        
-        var filePath = GenerateKey(); 
+        var filePath = GenerateStorageId();
         Directory.CreateDirectory(System.IO.Path.GetDirectoryName(filePath) ?? string.Empty); // Ensure the directory exists
 
         using var fileStream = System.IO.File.Create(filePath);
