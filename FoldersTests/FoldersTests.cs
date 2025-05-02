@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.Linq;
 using System.Text;
 
 namespace Folders.Core;
@@ -8,9 +9,9 @@ namespace Folders.Core;
 [TestClass]
 public class FoldersTests
 {
-    const string ImportLocation = @"E:\Imports";
+    static readonly string ImportLocation = Environment.GetEnvironmentVariable("ImportLocation") ?? @"E:\Imports";
 
-    static readonly FileSystemStorageProvider storage = new(@"E:\Storage");
+    static readonly FileSystemStorageProvider storage = new(Environment.GetEnvironmentVariable("StorageLocation") ?? @"E:\Storage");
 
     [ClassInitialize]
     public static void ClassInitialize(TestContext context)
