@@ -35,23 +35,30 @@ public class S3StorageProvider : BaseStorageProvider
 
     public override async Task<StorageId> StoreAsync(byte[] data)
     {
-        var key = GenerateStorageId();      // e.g., "s3://fileapi1/2025/05/02/29199779604a4c498cb153dee1f682cc"
+        StorageId Id = GenerateStorageId();      // e.g., "s3://fileapi1/2025/05/02/29199779604a4c498cb153dee1f682cc"
         using var stream = new MemoryStream(data);
-        await UploadToS3Async(key, stream);
-        return $"s3://{_bucketName}/{key}"; // Like "s3://bucket/path/to/file"
+        await UploadToS3Async(Id.Path, stream);
+        return Id;
     }
 
     public override async Task<StorageId> StoreStreamAsync(Stream dataStream)
     {
-        var key = GenerateStorageId();
-        await UploadToS3Async(key, dataStream);
-        return $"s3://{_bucketName}/{key}"; // Like "s3://bucket/path/to/file"
+        StorageId Id = GenerateStorageId();
+        await UploadToS3Async(Id.Path, dataStream);
+        return Id;
     }
 
     public override async Task<byte[]> RetrieveAsync(StorageId storageId)
     {
         var bucketName = storageId.GetBucketNameFrom();
-        using var response = await _s3Client.GetObjectAsync(bucketName, storageId);
+        //using var response = await _s3Client.GetObjectAsync(bucketName, storageId.Path);
+
+        var request = new GetObjectRequest
+        {
+            BucketName = bucketName,
+            Key = storageId.Path
+        };
+        using var response = await _s3Client.GetObjectAsync(request);
         using var memoryStream = new MemoryStream();
         await response.ResponseStream.CopyToAsync(memoryStream);
         return memoryStream.ToArray();
@@ -60,13 +67,25 @@ public class S3StorageProvider : BaseStorageProvider
     public override async Task<Stream> RetrieveStreamAsync(StorageId storageId)
     {
         var bucketName = storageId.GetBucketNameFrom();
-        var response = await _s3Client.GetObjectAsync(bucketName, storageId);
+        //var response = await _s3Client.GetObjectAsync(bucketName, storageId.Path);
+        var request = new GetObjectRequest
+        {
+            BucketName = bucketName,
+            Key = storageId.Path
+        };
+        using var response = await _s3Client.GetObjectAsync(request);
         return response.ResponseStream; // Caller should dispose
     }
 
     public override async Task DeleteAsync(StorageId storageId)
     {
         var bucketName = storageId.GetBucketNameFrom();
-        await _s3Client.DeleteObjectAsync(bucketName, storageId);
+        //await _s3Client.DeleteObjectAsync(bucketName, storageId.Path);
+        var request = new DeleteObjectRequest()
+        {
+            BucketName = bucketName,
+            Key = storageId.Path
+        };
+        await _s3Client.DeleteObjectAsync(request);
     }
 }

@@ -63,7 +63,7 @@ namespace CloudFolders.Tests
         public async Task RetrieveAsync_ShouldReturnByteArray()
         {
             // Arrange
-            var storageId = "test-key";
+            var pathKey = "test-key";
             var responseData = Encoding.UTF8.GetBytes("retrieved data");
             var responseStream = new MemoryStream(responseData);
             _mockS3Client
@@ -74,7 +74,7 @@ namespace CloudFolders.Tests
                 });
 
             // Act
-            var result = await _s3StorageProvider.RetrieveAsync("S3://" + BucketName + "/" + storageId);
+            var result = await _s3StorageProvider.RetrieveAsync("S3://" + BucketName + "/" + pathKey);
 
             // Assert
             CollectionAssert.AreEqual(responseData, result);
@@ -85,7 +85,7 @@ namespace CloudFolders.Tests
         public async Task RetrieveStreamAsync_ShouldReturnStream()
         {
             // Arrange
-            var storageId = "test-key";
+            var pathKey = "test-key";
             var responseStream = new MemoryStream(Encoding.UTF8.GetBytes("retrieved stream"));
             _mockS3Client
                 .Setup(client => client.GetObjectAsync(It.IsAny<GetObjectRequest>(), CancellationToken.None))
@@ -95,7 +95,7 @@ namespace CloudFolders.Tests
                 });
 
             // Act
-            await using (var result = await _s3StorageProvider.RetrieveStreamAsync("S3://" + BucketName + "/" + storageId))
+            await using (var result = await _s3StorageProvider.RetrieveStreamAsync("S3://" + BucketName + "/" + pathKey))
             {
                 // Assert
                 Assert.IsNotNull(result);
@@ -108,13 +108,13 @@ namespace CloudFolders.Tests
         public async Task DeleteAsync_ShouldDeleteObject()
         {
             // Arrange
-            var storageId = "test-key";
+            var pathKey = "test-key";
             _mockS3Client
                 .Setup(client => client.DeleteObjectAsync(It.IsAny <DeleteObjectRequest>(), CancellationToken.None))
                 .ReturnsAsync(new DeleteObjectResponse());
 
             // Act
-            await _s3StorageProvider.DeleteAsync("S3://" + BucketName + "/" + storageId);
+            await _s3StorageProvider.DeleteAsync("S3://" + BucketName + "/" + pathKey);
 
             // Assert
             _mockS3Client.Verify(client => client.DeleteObjectAsync(It.IsAny<DeleteObjectRequest>(), It.IsAny<CancellationToken>()), Times.Once);

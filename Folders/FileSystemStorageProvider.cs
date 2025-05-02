@@ -36,7 +36,7 @@ public class FileSystemStorageProvider: BaseStorageProvider
     public override async Task<Stream> RetrieveStreamAsync(StorageId storageId)
     {        
         var memoryStream = new MemoryStream();
-        using var fileStream = System.IO.File.OpenRead(storageId);
+        await using var fileStream = System.IO.File.OpenRead(storageId);
         await fileStream.CopyToAsync(memoryStream);
         memoryStream.Position = 0;
         return memoryStream;
