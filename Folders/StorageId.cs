@@ -74,8 +74,14 @@ public readonly struct StorageId : IEquatable<StorageId>
         if (Provider != "s3")
             throw new InvalidOperationException("StorageId is not an S3 ID.");
 
-        // Grant To do: Get the bucket name from the S3 ID
-        return Path.Split('/')[0];
+        // strip "s3://" from the key
+        var bucket = Value.Replace("s3://", string.Empty);
+
+        // strip after the first "/"
+        if (bucket.Contains('/'))
+            bucket = bucket.Substring(0, bucket.IndexOf('/'));
+        
+        return bucket;
     }
 }
 
