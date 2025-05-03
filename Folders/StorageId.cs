@@ -1,6 +1,15 @@
 ﻿namespace Folders.Core;
 using System;
 
+/// <summary>
+/// A storage ID is a unique identifier for a file in any storage proivder.
+/// </summary>
+/// <remarks>
+/// The client code can be used interchangeably as a string. The client code should not care about the internal structure of the id - it receives it from a storage provider when it stores a file 
+/// and uses it to retrieve the file later.
+/// The client code cannot create a StorageId directly. It must be created by a storage provider.
+/// The client code cannot inspect the internal structure of the StorageId.
+/// </remarks> 
 public readonly struct StorageId : IEquatable<StorageId>
 {
     private readonly Uri _uri;
@@ -8,20 +17,17 @@ public readonly struct StorageId : IEquatable<StorageId>
     /// <summary>
     /// Constructs a new StorageId from a provider key and a relative path.
     /// </summary>
-    public StorageId(string provider, string path)
-    {
-        if (string.IsNullOrWhiteSpace(provider))
-            throw new ArgumentException("Provider is required.", nameof(provider));
-
+    internal StorageId(string provider, string path)
+    {        
         if (string.IsNullOrWhiteSpace(path))
             throw new ArgumentException("Path is required.", nameof(path));
 
         // Format: provider://path (example: "s3://bucket/file.txt")
-        var formatted = $"{provider.ToLowerInvariant()}://{path.TrimStart('/')}";
+        var formatted = !string.IsNullOrEmpty(provider)? $"{provider.ToLowerInvariant()}://{path.TrimStart('/')}": path ;
         _uri = new Uri(formatted, UriKind.Absolute);
     }
 
-    private StorageId(Uri uri)
+    internal StorageId(Uri uri)
     {
         _uri = uri ?? throw new ArgumentNullException(nameof(uri));
     }
@@ -30,13 +36,13 @@ public readonly struct StorageId : IEquatable<StorageId>
     /// Gets the provider key, e.g., "s3", "local", "azure".
     /// Used internally by the registry to resolve the storage provider.
     /// </summary>
-    public string Provider => _uri.Scheme;
+    internal string Provider => _uri.Scheme;
 
     /// <summary>
     /// Gets the path portion of the storage ID (relative within provider context).
     /// Only used internally by the provider implementation.
     /// </summary>
-    public string Path => _uri.AbsolutePath.TrimStart('/');
+    internal string Path => _uri.AbsolutePath.TrimStart('/');
 
     /// <summary>
     /// Gets the string value of this storage ID, e.g., "s3://bucket/file.txt".
@@ -46,7 +52,7 @@ public readonly struct StorageId : IEquatable<StorageId>
     /// <summary>
     /// Parses a storage ID from a string like "s3://bucket/path/to/file".
     /// </summary>
-    public static StorageId Parse(string value)
+    internal static StorageId Parse(string value)
     {
         if (!Uri.TryCreate(value, UriKind.Absolute, out var uri))
             throw new FormatException($"Invalid StorageId format: '{value}'");
@@ -68,21 +74,7 @@ public readonly struct StorageId : IEquatable<StorageId>
 
     public bool Equals(StorageId other) => _uri.Equals(other._uri);
     public override bool Equals(object? obj) => obj is StorageId other && Equals(other);
-    public override int GetHashCode() => _uri.GetHashCode();
-    internal string GetBucketNameFrom()
-    {
-        if (Provider != "s3")
-            throw new InvalidOperationException("StorageId is not an S3 ID.");
-
-        // strip "s3://" from the key
-        var bucket = Value.Replace("s3://", string.Empty);
-
-        // strip after the first "/"
-        if (bucket.Contains('/'))
-            bucket = bucket.Substring(0, bucket.IndexOf('/'));
-        
-        return bucket;
-    }
+    public override int GetHashCode() => _uri.GetHashCode();    
 }
 
 

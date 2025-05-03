@@ -1,17 +1,16 @@
-﻿namespace Folders.Core;
+﻿namespace Folders.Core.FileSystem;
 public class FileSystemStorageProvider: BaseStorageProvider
 {      
-    public FileSystemStorageProvider(string basePath)
+    public FileSystemStorageProvider(string basePath): base(string.Empty, basePath)
     {
         Prefix = basePath;
         Directory.CreateDirectory(Prefix);
     }
 
     public override async Task<StorageId> StoreAsync(byte[] data)
-    {        
-        var filePath = GenerateStorageId();
-
-        Directory.CreateDirectory(System.IO.Path.GetDirectoryName(filePath) ?? string.Empty); // Ensure the directory exists
+    {
+        var storageId = GenerateStorageId();
+        var filePath = storageId.CreateFilePath();
 
         await System.IO.File.WriteAllBytesAsync(filePath, data);
         return filePath;
@@ -24,8 +23,8 @@ public class FileSystemStorageProvider: BaseStorageProvider
 
     public override async Task<StorageId> StoreStreamAsync(Stream dataStream)
     {        
-        var filePath = GenerateStorageId();
-        Directory.CreateDirectory(System.IO.Path.GetDirectoryName(filePath) ?? string.Empty); // Ensure the directory exists
+        var storageId = GenerateStorageId();
+        var filePath = storageId.CreateFilePath();
 
         using var fileStream = System.IO.File.Create(filePath);
         await dataStream.CopyToAsync(fileStream);
