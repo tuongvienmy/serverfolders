@@ -2,7 +2,7 @@
 using Amazon.S3.Model;
 using Folders.Core;
 
-namespace CloudFolders.Core;
+namespace Folders.Core.S3;
 
 //services.AddAWSService<IAmazonS3>();
 //services.AddSingleton<IStorageProvider>(sp =>
@@ -15,11 +15,9 @@ public class S3StorageProvider : BaseStorageProvider
 {
     private readonly IAmazonS3 _s3Client;
 
-    public S3StorageProvider(IAmazonS3 s3Client, string bucketName)
+    public S3StorageProvider(IAmazonS3 client, string bucketName): base("s3", bucketName)
     {
-        _s3Client = s3Client;
-        Prefix = bucketName;
-        ProviderKey = "s3://"; // Set the prefix to "s3" for S3 storage
+        _s3Client = client ?? throw new ArgumentNullException(nameof(client));        
     }    
 
     private async Task UploadToS3Async(string key, Stream stream)

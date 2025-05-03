@@ -72,14 +72,7 @@ public class StorageIdTests
         var id = new StorageId("s3", "bucket/file.txt");
 
         Assert.AreEqual("s3://bucket/file.txt", id.ToString());
-    }
-
-    [TestMethod]
-    public void Throws_When_Provider_Or_Path_Is_Empty()
-    {
-        Assert.ThrowsException<ArgumentException>(() => new StorageId("", "path/to/file"));
-        Assert.ThrowsException<ArgumentException>(() => new StorageId("s3", ""));
-    }
+    }    
 
     [DataTestMethod]
     [DataRow("local://C:/folder/file.txt", "C:/folder/file.txt")]

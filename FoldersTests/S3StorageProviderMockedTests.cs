@@ -2,7 +2,7 @@ using System.Text;
 using Amazon.S3;
 using Amazon.S3.Model;
 using Moq;
-using CloudFolders.Core;
+using Folders.Core.S3;
 
 namespace CloudFolders.Tests
 {

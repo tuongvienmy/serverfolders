@@ -1,8 +1,7 @@
 ﻿
 namespace Folders.Core;
 public interface IStorageProvider
-{
-    string ProviderKey { get; }
+{    
     Task<StorageId> StoreAsync(byte[] data);
     Task<StorageId> StoreStreamAsync(Stream dataStream);
     Task<byte[]> RetrieveAsync(StorageId storageId);    
