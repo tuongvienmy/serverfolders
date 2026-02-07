@@ -1,0 +1,28 @@
+﻿@page "/oldfolders"
+@using Components
+@using Components.Config
+@using ViewModels
+@using Microsoft.AspNetCore.Components.Forms
+
+<PageTitle>Folders</PageTitle>
+
+@if (_folders == null || _folders.Count == 0)
+{
+    <!-- When no roots exist, reuse FolderControl's root-init UI by passing null RootNode -->
+    <Folders.UI.Components.FolderControl RootNode="@null" Options="_folderOptions" />
+}
+else
+{
+    <div class="folders-toolbar" style="margin-bottom:1rem;">
+        <input type="text" class="form-control" style="max-width:300px; display:inline-block"
+               placeholder="Search all folders..." @bind="_searchText" @bind:event="oninput" />
+    </div>
+    <div class="folders-list" style="display: flex; flex-wrap: wrap; gap: 1rem;">
+        @foreach (var folder in FilteredFolders)
+        {
+            <div class="folder-card" style="flex: 1 1 300px; min-width: 300px; max-width: 400px; border: 1px solid #ccc; border-radius: 8px; padding: 1rem; background: #fafbfc;">
+                <Folders.UI.Components.FolderControl @key="folder.Id" RootNode="@folder" Options="_folderOptions" />
+            </div>
+        }
+    </div>
+}

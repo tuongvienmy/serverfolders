@@ -1,0 +1,61 @@
+﻿@using Folders.UI.Components.Config
+@using Folders.UI.ViewModels
+
+<div class="file-node" style="@GetProviderStyle()" title="@GetTooltipText()" @onclick="() => SelectFile(File)">
+    @if (Options.ShowMimeIcon)
+    {
+        <span class="mime-icon">@GetMimeIcon(File.MimeType)</span>
+    }
+    @File.Name
+</div>
+
+@code {
+    [Parameter] public FileViewModel File { get; set; } = default!;
+    [Parameter] public FolderOptions Options { get; set; } = new();
+
+    private string GetProviderStyle()
+    {
+        if (!Options.ShowStorageProviderColor) return string.Empty;
+
+        return File.StorageProvider switch
+        {
+            "s3" => "color:blue;",
+            "mem" => "color:orange;",
+            "file" => "color:green;",
+            _ => "color:gray;"
+        };
+    }
+
+    private string GetMimeIcon(string mime)
+    {
+        return mime switch
+        {
+            var m when m.StartsWith("image/") => "🖼️",
+            var m when m.StartsWith("audio/") => "🎵",
+            var m when m.StartsWith("video/") => "🎬",
+            "application/pdf" => "📕",
+            _ => "📄"
+        };
+    }
+
+    private string GetTooltipText()
+    {
+        if (!Options.ShowTooltip) return string.Empty;
+
+        var sizeText = File.SizeBytes.HasValue ? $"{File.SizeBytes.Value / 1024.0:F1} KB" : "Unknown size";
+        var lastModified = File.LastModified.HasValue ? File.LastModified.Value.ToString("g") : "Unknown date";
+
+        return $"Name: {File.Name}\n" +
+               $"MIME: {File.MimeType}\n" +
+               $"Provider: {File.StorageProvider}\n" +
+               $"Size: {sizeText}\n" +
+               $"Last Modified: {lastModified}\n" +
+               $"StorageId: {File.StorageId}";
+    }
+
+    private void SelectFile(FileViewModel file)
+    {
+        if (Options.AllowSelect)
+            Options.OnFileSelected.InvokeAsync(file);
+    }
+}

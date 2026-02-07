@@ -1,0 +1,124 @@
+﻿@using Folders.UI.Components.Config
+@using Folders.UI.ViewModels
+
+@inject services.FoldersApiClient client
+@inject IJSRuntime JS
+
+
+<div class="folder-node">
+    <div class="folder-header">
+    <span style="cursor:pointer" @onclick="ToggleExpand">
+        @(Node.IsExpanded ? "📂" : "📁")
+    </span>
+        <span style="cursor:pointer; margin-left:4px;" @onclick="SelectFolder" title="Select Folder">@Node.Name</span>
+    </div>
+    @if (Node.IsExpanded && Options!.AllowNavigationDown)
+    {
+        <div class="children" style="margin-left:20px;">
+            @foreach (var child in Node.Folders)
+            {
+                @if (Matches(child.Name))
+                {
+                    <FolderNode @key="child.Id" Node="child" SearchText="SearchText" Options="Options" />
+                }
+            }
+
+            @foreach (var file in Node.Files)
+            {
+                @if (Matches(file.Name))
+                {
+                    <FileNode @key="file.Id" File="file" Options="Options" />
+                }
+            }
+
+            @if (Options.AllowAddFolders || Options.AllowAddFiles)
+            {
+                <div class="add-buttons">
+                    @if (Options.AllowAddFolders)
+                    {
+                        <button @onclick="AddFolderClick">
+                            + Folder
+                        </button>
+                    }
+                    @if (Options.AllowAddFiles)
+                    {
+                        <button @onclick="AddFileClick">
+                            + File
+                        </button>
+                    }
+                </div>
+            }
+            <!-- hidden per-node file input -->
+            <InputFile style="display:none" id="@HiddenInputId" OnChange="OnFileSelected" />
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public FolderViewModel Node { get; set; } = default!;
+    [Parameter] public string SearchText { get; set; } = string.Empty;
+    [Parameter] public FolderOptions? Options { get; set; }    
+
+    private string NewFolderName { get; set; } = "New Folder";
+    private string HiddenInputId { get; set; } = string.Empty;
+
+    protected override void OnParametersSet()
+    {
+        HiddenInputId = $"hiddenFileInput_{Node.Id}";
+
+        // ensure lists are not null for nodes coming from other layers
+        Node.Folders ??= new List<FolderViewModel>();
+        Node.Files ??= new List<FileViewModel>();
+    }
+
+    private async Task AddFolderClick()
+    {
+        //await Options!.OnAddFolder.InvokeAsync((Node, NewFolderName));
+        var dto = await client.AddFolderAsync(Node.Id, NewFolderName);
+        Node.Folders.Add(new FolderViewModel(dto));
+
+        StateHasChanged();
+    }
+    private async Task AddFileClick()
+    {
+        //await Options!.OnAddFile.InvokeAsync((Node, ""));
+        await TriggerFileUploadAsync();
+
+        StateHasChanged();
+    }
+    private async Task TriggerFileUploadAsync()
+    {
+        await JS.InvokeVoidAsync("fileInterop.triggerFileInput", HiddenInputId);
+    }
+
+    private async Task OnFileSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file == null) return;
+
+        var dto = await client.UploadFileAsync(Node.Id, file);
+        var newFile = new FileViewModel(dto);
+
+        Node.Files.Add(newFile);
+        StateHasChanged();
+    }
+
+    private void ToggleExpand()
+    {
+        Node.IsExpanded = !Node.IsExpanded;        
+    }
+
+    private async Task SelectFolder()
+    {
+        if (Options?.AllowSelect == true && Options.OnFolderSelected.HasDelegate)
+            await Options.OnFolderSelected.InvokeAsync(Node);
+
+
+        SearchText = string.Empty;
+        ToggleExpand();
+    }
+
+    private bool Matches(string name) =>
+        string.IsNullOrWhiteSpace(SearchText)
+        || name.Contains(SearchText, StringComparison.OrdinalIgnoreCase);
+}

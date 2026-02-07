@@ -1,0 +1,17 @@
+[
+  {
+    "Name": "API and UI",
+    "Projects": [
+      {
+        "Path": "Src\\Folders.API\\Folders.API.csproj",
+        "Action": "Start",
+        "DebugTarget": "http"
+      },
+      {
+        "Path": "Src\\Folders.UI\\Folders.UI.csproj",
+        "Action": "Start",
+        "DebugTarget": "http"
+      }
+    ]
+  }
+]

@@ -1,0 +1,68 @@
+﻿@page "/folders"
+@using global::Folders.UI.ViewModels
+
+
+<h2 class="h4 fw-bold mb-3">My Folders</h2>
+
+@if (rootFolders == null)
+{
+    <p class="text-muted">Loading...</p>
+}
+else if (rootFolders.Count == 0)
+{
+    <p class="text-muted">No folders yet.</p>
+    <button class="btn btn-primary btn-sm" @onclick="CreateRootFolder">
+        ➕ Create New Folder
+    </button>
+}
+else
+{
+    <ul class="list-unstyled">
+        @foreach (var folder in rootFolders)
+        {
+            <li class="mb-1">
+                <NavLink class="text-primary text-decoration-none" href="@($"/folders/{folder.Id}")">
+                    📁 @folder.Name
+                </NavLink>
+            </li>
+        }
+    </ul>
+    <div class="d-flex mt-2" style="max-width:300px;">
+        <input class="form-control form-control-sm me-2 flex-grow-1"
+               placeholder="Enter folder name..."
+               @bind="newFolderName" />
+        <button class="btn btn-success btn-sm flex-shrink-0" @onclick="CreateRootFolder">
+            ➕ New Root Folder
+        </button>
+    </div>
+}
+
+@code {
+    [Inject] private services.FoldersApiClient client { get; set; } = default!;
+    private List<FolderViewModel>? rootFolders;
+    private string newFolderName = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var folders = await client.GetFolderByNameAsync();
+        if (folders == null || folders.Count == 0)
+            return;
+
+        rootFolders = folders.Select(dto => new FolderViewModel(dto)).ToList();
+    }
+
+    private async Task CreateRootFolder()
+    {
+        if (string.IsNullOrWhiteSpace(newFolderName))
+            return;
+
+        var folder = await client.NewRoot(newFolderName);
+        if (folder != null)
+        {
+            rootFolders ??= new List<FolderViewModel>();
+            rootFolders.Insert(0, new FolderViewModel(folder));
+            newFolderName = string.Empty; // clear input
+        }
+    }
+}
+

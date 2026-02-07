@@ -1,0 +1,410 @@
+﻿@using Folders.Contracts
+@using Folders.UI.Components.Config
+@using Folders.UI.ViewModels
+@inject Folders.UI.services.FoldersApiClient client
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+
+<div class="p-3 bg-light rounded shadow">
+    <!-- Breadcrumb -->
+    <nav class="mb-3 small text-secondary">
+        <span class="fw-semibold" style="cursor:pointer;" @onclick="() => NavigateTo(null)">🏠 Roots</span>
+
+        @foreach (var crumb in Breadcrumb)
+        {
+            <span class="mx-1">/</span>
+            <span @key="crumb.Id" class="text-primary" style="cursor:pointer;" @onclick="() => NavigateTo(crumb.Id)">
+                @crumb.Name
+            </span>
+        }
+    
+    </nav>    
+   
+    @if (CurrentFolder is not null)
+    {
+        <!-- Actions -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="d-flex align-items-center gap-2">
+                @if (Options.AllowSearch)
+                {
+                    <input type="text"
+                           placeholder="Search..."
+                           @bind="searchTerm"
+                           class="form-control form-control-sm me-2" style="width:auto;" />
+                    <button class="btn btn-secondary btn-sm me-2" @onclick="Search">
+                        🔍
+                    </button>
+                }
+
+                @if (Options.AllowAddFolder)
+                {
+                    <button class="btn btn-primary btn-sm me-2" @onclick="() => showNewFolderModal = true">
+                        ➕ Folder
+                    </button>
+                }
+
+                @if (Options.AllowUpload)
+                {
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="text-secondary">Storage:
+                        <select @bind="selectedProvider" class="border rounded px-2 py-1 text-lg-center">
+                            @foreach (var provider in Providers)
+                            {
+                                <option value="@provider">@provider</option>
+                            }
+                        </select>
+                        </label>
+                        <InputFile OnChange="UploadFile" class="d-none" id="fileInput" />
+                        <label for="fileInput" class="btn btn-success btn-sm mb-0">
+                            ⬆ Upload
+                        </label>
+                    </div>                    
+                }
+            </div>
+        </div>
+
+        <!-- Grid View -->
+        <div class="row g-3">
+            @foreach (var folder in CurrentFolder.Folders)
+            {
+                <div class="col-6 col-sm-4 col-md-3 col-lg-2">
+                    <div class="card h-100 text-center shadow-sm hover-shadow" style="cursor:pointer;" @onclick="() => DrillIn(folder.Id)">
+                        <div class="card-body d-flex flex-column align-items-center justify-content-center">
+                            <div class="fs-2 fs-md-1 mb-2">📁</div>
+                            <div class="fw-semibold text-truncate w-100">@folder.Name</div>
+                            <div class="d-flex flex-wrap gap-1 mt-2 justify-content-center">
+                                <button class="btn btn-outline-secondary btn-sm"
+                                        @onclick="() => OpenRenameModal(folder)">
+                                    ✏ Rename
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @foreach (var file in CurrentFolder.Files)
+            {
+                <div class="col-6 col-sm-4 col-md-3 col-lg-2">
+                    <div class="card h-100 text-center shadow-sm">
+                        <div class="card-body d-flex flex-column align-items-center justify-content-center" style="@GetProviderStyle(file)">
+                            <div class="fs-2 fs-md-1 mb-2">@GetMimeIcon(file.MimeType)</div>
+                            <div class="fw-semibold text-truncate w-100" title="@GetTooltipText(file)">@file.Name</div>
+                            <div class="d-flex flex-wrap gap-1 mt-2 justify-content-center">
+                                @if (Options.AllowDownload)
+                                {
+                                    <button class="btn btn-secondary btn-sm" @onclick="() => Download(CurrentFolder.Id, file.Id)">
+                                        ⬇ Download
+                                    </button>
+                                }
+                                @if (Options.AllowMove)
+                                {
+                                    @* Move button placeholder *@
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        
+        </div>
+    }
+    
+    else
+    {
+        <p class="text-muted">Loading...</p>
+    }
+
+</div>
+
+<!-- New Folder Modal -->
+@if (showNewFolderModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);"
+         @onclick="OnBackdropClick">
+        <div class="modal-dialog modal-sm modal-dialog-centered"
+             @onclick:stopPropagation="true">
+            <div class="modal-content shadow">
+                <div class="modal-header">
+                    <h5 class="modal-title">New Folder</h5>
+                    <button type="button" class="btn-close" @onclick="CancelAddSubFolder"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="text"
+                           class="form-control"
+                           placeholder="Folder name..."
+                           @bind="newFolderName"
+                           @onkeydown="HandleNewFolderKeyDown"
+                           autofocus />
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CancelAddSubFolder">Cancel</button>
+                    <button class="btn btn-primary" @onclick="ConfirmAddSubFolder">Create</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+
+<!-- Rename Folder Modal -->
+@if (showRenameFolderModal && folderToRename is not null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);"
+         @onclick="OnBackdropClickRename">
+        <div class="modal-dialog modal-sm modal-dialog-centered"
+             @onclick:stopPropagation="true">
+            <div class="modal-content shadow">
+                <div class="modal-header">
+                    <h5 class="modal-title">Rename Folder</h5>
+                    <button type="button" class="btn-close" @onclick="CancelRenameFolder"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="text"
+                           class="form-control"
+                           placeholder="New name..."
+                           @bind="renameFolderName"
+                           @onkeydown="HandleRenameFolderKeyDown"
+                           autofocus />
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CancelRenameFolder">Cancel</button>
+                    <button class="btn btn-primary" @onclick="ConfirmRenameFolder">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+
+@code {
+    [Parameter] public Guid RootFolderId { get; set; }
+    [Parameter] public FolderOptions Options { get; set; } = new FolderOptions();
+
+    private bool showNewFolderModal = false;
+    private bool showRenameFolderModal = false;
+    private FolderViewModel? folderToRename;
+    private string renameFolderName = "";
+
+    private FolderViewModel? CurrentFolder;
+    private List<FolderViewModel> Breadcrumb = new();
+    private string searchTerm = string.Empty;
+    private Dictionary<Guid, string> fileTargetProviders = new();
+    private string newFolderName = "New Folder";
+    private string selectedProvider = "file";
+
+    private IList<string> Providers =>
+        (Options.AllowedProviders != null && Options.AllowedProviders.Count > 0)
+            ? Options.AllowedProviders
+            : new[] { "s3", "file", "mem" };
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadFolder(RootFolderId);
+    }
+
+    private string GetTooltipText(FileViewModel file)
+    {
+        if (!Options.ShowTooltip) return string.Empty;
+
+        var sizeText = file.SizeBytes.HasValue ? $"{file.SizeBytes.Value / 1024.0:F1} KB" : "Unknown size";
+        var lastModified = file.LastModified.HasValue ? file.LastModified.Value.ToString("g") : "Unknown date";
+
+        return $"Name: {file.Name}\n" +
+               $"MIME: {file.MimeType}\n" +
+               $"Provider: {file.StorageProvider}\n" +
+               $"Size: {sizeText}\n" +
+               $"Last Modified: {lastModified}\n" +
+               $"StorageId: {file.StorageId}";
+    }
+
+    private string GetMimeIcon(string mime)
+    {
+        return mime switch
+        {
+            var m when m.StartsWith("image/") => "🖼️",
+            var m when m.StartsWith("audio/") => "🎵",
+            var m when m.StartsWith("video/") => "🎬",
+            "application/pdf" => "📕",
+            _ => "📄"
+        };
+    }
+
+    private string GetProviderStyle(FileViewModel file)
+    {
+        if (!Options.ShowStorageProviderColor) return string.Empty;
+
+        return file.StorageProvider switch
+        {
+            "s3" => "color:blue;",
+            "mem" => "color:orange;",
+            "file" => "color:green;",
+            _ => "color:gray;"
+        };
+    }
+
+    private async Task LoadFolder(Guid folderId)
+    {       
+        CurrentFolder = await GetFolderById(folderId);
+        await UpdateBreadcrumb();
+        StateHasChanged();
+    }
+
+    private async Task<FolderViewModel?> GetFolderById(Guid id)
+    {
+        var folderDto = await client.GetFolderAsync(id);
+        if (folderDto != null)            
+            return new FolderViewModel(folderDto);
+        return null;
+    }
+
+    private async Task UpdateBreadcrumb()
+    {
+        Breadcrumb.Clear();
+        var f = CurrentFolder;
+        Breadcrumb.Add(CurrentFolder!);
+        while (f?.ParentId != null)
+        {
+            var parentVM = await GetFolderById(f.ParentId.Value);
+            if (parentVM == null)
+                break;
+
+            Breadcrumb.Insert(0, parentVM);
+            f = parentVM;
+        }
+    }
+
+    private void NavigateTo(Guid? folderId)
+    {
+        if (folderId == null)
+        {
+            // Go back to roots page
+            Navigation.NavigateTo("/folders");
+        }
+        else
+        {
+            _ = LoadFolder(folderId.Value);
+        }
+    }
+
+    private async Task DrillIn(Guid folderId) => await LoadFolder(folderId);
+
+    private async Task AddSubFolder()
+    {
+        if (string.IsNullOrWhiteSpace(newFolderName)) return;
+
+        var folder = await client.AddFolderAsync(CurrentFolder!.Id.ToString(), newFolderName);
+        if (folder != null)
+            await LoadFolder(CurrentFolder!.Id);
+
+        newFolderName = "";
+    }
+
+    private async Task UploadFile(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+
+        var fileDto = await client.UploadFileAsync(CurrentFolder!.Id.ToString(), file, selectedProvider);
+
+        if (fileDto != null)
+            await LoadFolder(CurrentFolder!.Id);
+    }
+
+    private async Task Download(Guid parentId, Guid fileId)
+    {        
+        await client.DownloadFileAsync(parentId, fileId);
+    }
+
+    private async Task MoveFile(Guid fileId)
+    {
+        // if (!fileTargetProviders.TryGetValue(fileId, out var targetProvider))
+        //     return;
+
+        // var response = await Http.PostAsJsonAsync($"api/files/{fileId}/move", new { targetProvider });
+        // if (response.IsSuccessStatusCode)
+        // {
+        //     await LoadFolder(CurrentFolder!.Id);
+        // }
+    }
+
+    private async Task Search()
+    {
+        // To do: look into the children of the CurrentFolder
+        var folders = await client.GetFolderByNameAsync(searchTerm);
+        var found = folders.Count > 0 ? new FolderViewModel(folders[0]) : null;
+
+        if (found != null)
+            CurrentFolder = found;
+    }
+    private async Task ConfirmAddSubFolder()
+    {
+        if (string.IsNullOrWhiteSpace(newFolderName)) return;
+
+        var folder = await client.AddFolderAsync(CurrentFolder!.Id.ToString(), newFolderName);
+        if (folder != null)
+            await LoadFolder(CurrentFolder!.Id);
+
+        newFolderName = "";
+        showNewFolderModal = false;
+    }
+
+    private void CancelAddSubFolder()
+    {
+        newFolderName = "";
+        showNewFolderModal = false;
+    }
+
+    private void OnBackdropClick()
+    {
+        CancelAddSubFolder();
+    }
+
+    private async Task HandleNewFolderKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+            await ConfirmAddSubFolder();
+        else if (e.Key == "Escape")
+            CancelAddSubFolder();
+    }
+    private void OpenRenameModal(FolderViewModel folder)
+    {
+        folderToRename = folder;
+        renameFolderName = folder.Name;
+        showRenameFolderModal = true;
+    }
+
+    private async Task ConfirmRenameFolder()
+    {
+        if (folderToRename is null || string.IsNullOrWhiteSpace(renameFolderName))
+            return;
+
+        // Assuming your API client has RenameFolderAsync(Guid id, string newName)
+        var updated = await client.RenameFolderAsync(folderToRename.Id, renameFolderName);
+        if (updated != null)
+             await LoadFolder(CurrentFolder!.Id);
+
+        folderToRename = null;
+        renameFolderName = "";
+        showRenameFolderModal = false;
+    }
+
+    private void CancelRenameFolder()
+    {
+        folderToRename = null;
+        renameFolderName = "";
+        showRenameFolderModal = false;
+    }
+
+    private void OnBackdropClickRename()
+    {
+        CancelRenameFolder();
+    }
+
+    private async Task HandleRenameFolderKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+            await ConfirmRenameFolder();
+        else if (e.Key == "Escape")
+            CancelRenameFolder();
+    }
+}
