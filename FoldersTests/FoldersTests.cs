@@ -1,18 +1,18 @@
 using Folders.Core.FileSystem;
 using System.Diagnostics;
+using Folders.Core.Aggregates;
+using System.Text;
 using System.Drawing;
 using System.Drawing.Imaging;
-using System.Linq;
-using System.Text;
 
-namespace Folders.Core;
+namespace Tests.Folders.Core;
 
 [TestClass]
 public class FoldersTests
 {
-    static readonly string ImportLocation = Environment.GetEnvironmentVariable("ImportLocation") ?? @"E:\Imports";
+    public static readonly string ImportLocation = Environment.GetEnvironmentVariable("ImportLocation") ?? @"E:\Imports";
 
-    static readonly FileSystemStorageProvider storage = new(Environment.GetEnvironmentVariable("StorageLocation") ?? @"E:\Storage");
+    public static readonly FileSystemStorageProvider storage = new(Environment.GetEnvironmentVariable("StorageLocation") ?? @"E:\Storage");
 
     [ClassInitialize]
     public static void ClassInitialize(TestContext context)
@@ -27,7 +27,7 @@ public class FoldersTests
     {
         var folder = Folder.NewFolder("TestServerCode");
         Assert.IsNotNull(folder);
-        Assert.IsNull(folder.Parent);        
+        Assert.IsNull(folder.ParentFolder);        
     }
     [TestMethod]
     public void CreateFolderTree_AddFileToSub_FindFromRoot()
@@ -39,18 +39,18 @@ public class FoldersTests
         Assert.IsNotNull(subOne);
         Assert.IsTrue(subOne.Name == "SubOne");
         
-        Assert.IsTrue(subOne.Parent?.Name == "TestServerCode");
+        Assert.IsTrue(subOne.ParentFolder?.Name == "TestServerCode");
 
         var subTwo = folder.AddFolder("SubTwo");
         Assert.IsNotNull(subTwo);
-        Assert.IsTrue(subTwo.Parent == subOne.Parent);
+        Assert.IsTrue(subTwo.ParentFolder == subOne.ParentFolder);
 
         var fileName = TestUitility.GenerateRandomSentence(true);
 
         var file = subOne.AddFile(fileName, "text/plain", new MemoryStream(Encoding.UTF8.GetBytes("Hello World")), storage);
         Assert.IsNotNull(file);
         Assert.IsTrue(file.Name == fileName);
-        Assert.IsTrue(file.Parent == subOne);
+        Assert.IsTrue(file.ParentFolder == subOne);
 
         var items = folder.FindAll(fileName);
         Assert.IsTrue(items.Count() == 1);

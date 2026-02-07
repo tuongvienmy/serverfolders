@@ -1,0 +1,74 @@
+﻿@using Folders.UI.Components.Config
+@using Folders.UI.ViewModels
+
+<div class="folder-control">
+    @if (RootNode is null)
+    {
+        @if (Options.EnableRootInitialization)
+        {
+            <div class="init-panel">
+                <input @bind="InitName"
+                       placeholder="@Options.InitPlaceholder"
+                       @onkeydown="HandleInitKeyDown" />
+                <div class="init-actions">
+                    @if (Options.ShowCreateButton)
+                    {
+                        <button disabled="@(!CanSubmit)"
+                                @onclick="() => Options.OnCreateRootRequested.InvokeAsync(InitName)">
+                            Create
+                        </button>
+                    }
+                    @if (Options.ShowRetrieveButton)
+                    {
+                        <button disabled="@(!CanSubmit)"
+                                @onclick="() => Options.OnRetrieveRootRequested.InvokeAsync(InitName)">
+                            Retrieve
+                        </button>
+                    }
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="init-placeholder">
+                <p>No folder selected.</p>
+            </div>
+        }
+    }
+    else
+    {
+        @if (Options.AllowSearch)
+        {
+            <input @bind="SearchText" placeholder="Search..." @oninput="OnSearchChanged" />
+        }
+
+        <FolderNode Node="RootNode" @key="RootNode.Id" SearchText="SearchText" Options="Options" />
+    }
+</div>
+
+@code {
+    [Parameter] public FolderViewModel? RootNode { get; set; }
+    [Parameter] public FolderOptions Options { get; set; } = new();
+
+    private string SearchText { get; set; } = string.Empty;
+    private string InitName { get; set; } = string.Empty;
+
+    private bool CanSubmit =>
+        !string.IsNullOrWhiteSpace(InitName)
+        && (Options.ValidateRootName?.Invoke(InitName) ?? true);
+
+    private void OnSearchChanged(ChangeEventArgs e) =>
+        SearchText = e.Value?.ToString() ?? string.Empty;
+
+    private void HandleInitKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && CanSubmit)
+        {
+            if (Options.EnterKeyAction == RootInitAction.Create)
+                Options.OnCreateRootRequested.InvokeAsync(InitName);
+            else
+                Options.OnRetrieveRootRequested.InvokeAsync(InitName);
+        }
+    }
+}
+

@@ -1,5 +1,6 @@
-﻿namespace Folders.Core;
+﻿namespace Tests.Folders.Core;
 
+using global::Folders.Core.Values;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 

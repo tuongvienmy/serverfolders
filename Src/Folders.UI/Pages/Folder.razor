@@ -1,0 +1,27 @@
+﻿@page "/folders/{FolderId:guid}"
+
+@using global::Folders.UI.Components.Config
+@inject NavigationManager Navigation
+
+<Folders.UI.Components.FolderControl RootFolderId="@FolderId" Options="@options" />
+
+<button class="btn btn-secondary btn-sm mt-2" @onclick="BackToRoots">⬅ Back to My Folders</button>
+
+@code {
+    [Parameter] public Guid FolderId { get; set; }
+
+    private FolderOptions options = new()
+    {
+        AllowSearch = true,
+        AllowAddFolder = true,
+        AllowUpload = true,
+        AllowDownload = true,
+        AllowMove = true   // Enable Move File feature
+    };
+
+    private void BackToRoots()
+    {
+        Navigation.NavigateTo("/folders");
+    }
+}
+

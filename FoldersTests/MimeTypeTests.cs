@@ -1,6 +1,6 @@
-﻿using Folders.Core;
+﻿using Folders.Core.Values;
 
-namespace Folders.Core;
+namespace Tests.Folders.Core;
 
 [TestClass]
 public class MimeTypeTests
