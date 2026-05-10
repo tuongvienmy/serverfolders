@@ -29,10 +29,12 @@ public class S3StorageProvider : BaseStorageProvider
     public override async Task<StorageInfo> StoreAsync(byte[] data)
     {
         StorageId Id = GenerateStorageId();      // e.g., "s3://fileapi1/2025/05/02/29199779604a4c498cb153dee1f682cc"
-        using var stream = new MemoryStream(data);
-        var mimeType = MimeType.FromBuffer(data);
-        await UploadToS3Async(Id.RelativePath, stream);
-        return new StorageInfo(Id, mimeType, data.LongLength);
+        using (var stream = new MemoryStream(data))
+        {
+            var mimeType = MimeType.FromBuffer(data);
+            await UploadToS3Async(Id.RelativePath, stream);
+            return new StorageInfo(Id, mimeType, data.LongLength);
+        }
     }
 
     public override async Task<StorageInfo> StoreStreamAsync(Stream dataStream)
@@ -50,10 +52,14 @@ public class S3StorageProvider : BaseStorageProvider
             BucketName = Prefix,
             Key = storageId.RelativePath
         };
-        using var response = await _s3Client.GetObjectAsync(request);
-        using var memoryStream = new MemoryStream();
-        await response.ResponseStream.CopyToAsync(memoryStream);
-        return memoryStream.ToArray();
+        using (var response = await _s3Client.GetObjectAsync(request))
+        {
+            using (var memoryStream = new MemoryStream())
+            {
+                await response.ResponseStream.CopyToAsync(memoryStream);
+                return memoryStream.ToArray();
+            }
+        }
     }
 
     public override async Task<Stream> RetrieveStreamAsync(StorageId storageId)
@@ -63,8 +69,10 @@ public class S3StorageProvider : BaseStorageProvider
             BucketName = Prefix,
             Key = storageId.RelativePath
         };
-        using var response = await _s3Client.GetObjectAsync(request);
-        return response.ResponseStream; // Caller should dispose
+        using (var response = await _s3Client.GetObjectAsync(request))
+        {
+            return response.ResponseStream; // Caller should dispose
+        }
     }
 
     public override async Task DeleteAsync(StorageId storageId)

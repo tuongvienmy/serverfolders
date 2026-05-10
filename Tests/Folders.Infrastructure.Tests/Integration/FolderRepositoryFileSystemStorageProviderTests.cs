@@ -105,7 +105,7 @@ public class FolderRepositoryWithFileSystemStorageProviderTests
         var fileBytes = Encoding.UTF8.GetBytes("Hello World");
         using var stream = new MemoryStream(fileBytes);
 
-        var addFileCmd = new AddFileToFolderCommand(folder,"hello.txt",fileBytes, StorageProviderKey.File);
+        var addFileCmd = new AddFileToFolderCommand(folder.Id,"hello.txt",stream, StorageProviderKey.File);
 
         var addedFile = await _mediator.Send(addFileCmd);
 

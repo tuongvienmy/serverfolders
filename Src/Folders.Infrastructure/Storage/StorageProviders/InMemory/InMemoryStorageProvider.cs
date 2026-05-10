@@ -21,13 +21,13 @@ public class InMemoryStorageProvider : BaseStorageProvider
         StorageId id = GenerateStorageId();
         using var memoryStream = new MemoryStream();
         dataStream.CopyTo(memoryStream);
-        _storage[id.Value] = memoryStream.ToArray();
+        _storage[id.RelativePath] = memoryStream.ToArray();
         var mimeType = MimeType.FromStream(memoryStream);
         return Task.FromResult(new StorageInfo(id, mimeType, memoryStream.Length));
     }
     public override Task<byte[]> RetrieveAsync(StorageId storageId)
     {
-        if (_storage.TryGetValue(storageId.Value, out var data))
+        if (_storage.TryGetValue(storageId.RelativePath, out var data))
         {
             return Task.FromResult(data);
         }

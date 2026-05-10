@@ -1,12 +1,7 @@
-﻿using Folders.API.Mappers;
-using Folders.API.Models;
-using Folders.Application.UseCases.AddFileToFolder;
+﻿using Folders.Application.UseCases.AddFileToFolder;
 using Folders.Application.UseCases.GetFileFromFolder;
-using Folders.Application.UseCases.GetFolderById;
 using MediatR;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using System.Threading;
 
 namespace Folders.API.Controllers
 {
@@ -25,59 +20,42 @@ namespace Folders.API.Controllers
         {
             if (formFile == null || formFile.Length == 0)
                 return BadRequest("File is required.");
+
             if (string.IsNullOrWhiteSpace(storageProviderKey))
                 return BadRequest("Storage provider key is required.");
 
-            byte[] data;
-            using (var ms = new MemoryStream())
-            {
-                await formFile.CopyToAsync(ms);
-                data = ms.ToArray();
-            }
+            await using var stream = formFile.OpenReadStream();
 
-            var folder = await _mediator.Send(new GetFolderByIdQuery(parentFolderId));
-            if (folder is null)
-                return NotFound("Folder not found.");
-            
 
             var command = new AddFileToFolderCommand(
-                folder,
+                parentFolderId,
                 formFile.FileName,
-                data,
+                stream,
                 storageProviderKey
             );
-            var file = await _mediator.Send(command);
-            
-            if (file is null)
-                return NotFound("File could not be created.");
-            
-            return CreatedAtRoute(
-                routeName: "GetFolderById",
-                routeValues: new { id = parentFolderId },
-                value: file.ToDto());
+
+            var handler = ActivatorUtilities.CreateInstance<AddFileToFolderHandler>(HttpContext.RequestServices);
+            var file = await handler.Handle(command, default);
+
+            return CreatedAtRoute("GetFileFromFolder", new { ParentFolderId = parentFolderId, fileId = file.Id }, file);
         }
         
         [HttpGet("{parentFolderId:guid}/{fileId:guid}", Name = "GetFileFromFolder")]
         public async Task<ActionResult> GetFileFromFolder(Guid parentFolderId, Guid fileId, [FromQuery]bool downLoading = true)
         {
-            var folder = await _mediator.Send(new GetFolderByIdQuery(parentFolderId));
-
-            if (folder is null)
-                return NotFound("Folder not found");
-                        
-            var result = await _mediator.Send(new GetFileFromFolderCommand(folder, fileId, downLoading));
+            var result = await _mediator.Send(new GetFileFromFolderCommand(parentFolderId, fileId, downLoading));
 
             if (downLoading)
             {
                 if (result?.Data is null || result.Data.Length == 0)
                     return NotFound("File content is empty or missing.");
                 
-                var contentType = result.File.MimeType.Value ?? "application/octet-stream";
+                var contentType = result.File.MimeType ?? "application/octet-stream";
                 return File(result.Data, contentType, result.File.Name);
             }
             else
             {
-                return Ok(result.File.ToDto());
+                return Ok(result.File);
             }
         }        
     }

@@ -144,7 +144,7 @@ public sealed class FolderTests
     public void Folder_AddFile_FileAddedToFolder()
     {
         var folder = Folder.CreateRoot("TestFolder");
-        var file = folder.AddFile("TestFile.txt");                
+        var file = folder.AddFile("TestFile.txt", StorageInfo.Empty);
         
         Assert.IsNotNull(folder.Get(file.Name) is not null);
         Assert.IsTrue(folder.Get(file.Name) is Core.Aggregates.File);
@@ -157,10 +157,10 @@ public sealed class FolderTests
     {
         var folder = Folder.CreateRoot("TestFolder");
         var subFolder = folder.AddFolder("TestSubFolder");
-        var file = folder.AddFile("TestFile.txt");
-                     
+        var file = folder.AddFile("TestFile.txt", StorageInfo.Empty);
+
         var results = folder.FindAll("Test", true, typeof(Aggregates.File)).ToList();
-        
+
         Assert.AreEqual(1, results.Count);
         Assert.IsTrue(results.Any(i => i.Name == "TestFile.txt"));
         Assert.IsTrue(results.Any(i => i is Core.Aggregates.File));
@@ -169,5 +169,61 @@ public sealed class FolderTests
         Assert.AreEqual(2, results.Count);
         Assert.IsTrue(results.Any(i => i.Name == "TestSubFolder"));
         Assert.IsTrue(results.Any(i => i.Name == "TestFile.txt"));
+    }
+
+    [TestMethod]
+    public void Folder_Path_RootFolder_ReturnsRootPath()
+    {
+        // Arrange
+        var rootFolder = Folder.CreateRoot("root");
+
+        // Act
+        var path = rootFolder.Path;
+
+        // Assert
+        Assert.IsNotNull(path);
+        Assert.AreEqual(1, path.Segments.Count);
+        Assert.AreEqual("root", path.Segments[0]);
+        Assert.AreEqual("/root", path.ToString());
+    }
+
+    [TestMethod]
+    public void Folder_Path_NestedFolder_ReturnsFullPath()
+    {
+        // Arrange
+        var rootFolder = Folder.CreateRoot("root");
+        var subfolder = rootFolder.AddFolder("subfolder");
+
+        // Act
+        var path = subfolder.Path;
+
+        // Assert
+        Assert.IsNotNull(path);
+        Assert.AreEqual(2, path.Segments.Count);
+        Assert.AreEqual("root", path.Segments[0]);
+        Assert.AreEqual("subfolder", path.Segments[1]);
+        Assert.AreEqual("/root/subfolder", path.ToString());
+    }
+
+    [TestMethod]
+    public void Folder_Path_DeeplyNestedFolder_ReturnsFullPath()
+    {
+        // Arrange
+        var rootFolder = Folder.CreateRoot("root");
+        var level1 = rootFolder.AddFolder("level1");
+        var level2 = level1.AddFolder("level2");
+        var level3 = level2.AddFolder("level3");
+
+        // Act
+        var path = level3.Path;
+
+        // Assert
+        Assert.IsNotNull(path);
+        Assert.AreEqual(4, path.Segments.Count);
+        Assert.AreEqual("root", path.Segments[0]);
+        Assert.AreEqual("level1", path.Segments[1]);
+        Assert.AreEqual("level2", path.Segments[2]);
+        Assert.AreEqual("level3", path.Segments[3]);
+        Assert.AreEqual("/root/level1/level2/level3", path.ToString());
     }
 }

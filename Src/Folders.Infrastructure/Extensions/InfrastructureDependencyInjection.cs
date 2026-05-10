@@ -64,7 +64,6 @@ public static class InfrastructureDependencyInjection
             var bucketName = Environment.GetEnvironmentVariable("BucketName") ?? @"fileapi1";
             return new S3StorageProvider(s3Client, bucketName, sp.GetRequiredService<IStoragePathStrategy>());
         });
-
         return services;
     }
 }

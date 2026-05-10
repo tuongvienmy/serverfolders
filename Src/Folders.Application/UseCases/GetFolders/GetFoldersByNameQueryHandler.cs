@@ -14,6 +14,7 @@ public class GetFoldersByNameQueryHandler : IRequestHandler<GetFoldersByNameQuer
     public async Task<IEnumerable<Folder>> Handle(GetFoldersByNameQuery request, CancellationToken cancellationToken)
     {
         if (request == null) throw new ArgumentNullException(nameof(request));
-        return await _folderRepository.FindByNameAsync(request.SearchTerm, request.rootOnly);
+        var folders = await _folderRepository.FindByNameAsync(request.SearchTerm);
+        return request.rootOnly ? folders.Where(f => f.ParentFolderId == null) : folders;
     }
 }

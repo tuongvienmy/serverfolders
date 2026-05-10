@@ -1,5 +1,5 @@
-using File = Folders.Core.Aggregates.File;
+using Folders.Application.DTOs;
 
 namespace Folders.Application.UseCases.GetFileFromFolder;
 
-public record GetFileFromFolderResult(byte[]? Data, File File);
+public record GetFileFromFolderResult(byte[]? Data, FileDto File);

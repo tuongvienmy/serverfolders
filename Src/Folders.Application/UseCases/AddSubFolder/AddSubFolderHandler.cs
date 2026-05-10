@@ -20,7 +20,7 @@ public class AddSubFolderHandler : IRequestHandler<AddSubFolderCommand, Folder>
             throw new FolderNotFoundException(request.parentFolderId);
         }
         var subFolder = folder.AddFolder(request.subFolderName);
-        _folderRepo.UpdateAsync(folder);
+        await _folderRepo.UpdateAsync(folder);
         await _folderRepo.UnitOfWork.SaveChangesAsync(cancellationToken);
         return subFolder;
     }

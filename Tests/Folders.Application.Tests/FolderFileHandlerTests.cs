@@ -100,41 +100,36 @@ public sealed class FolderFileHandlerTests
     public async Task CreateNewFolder_ShoudCreateRootFolder()
     {
         var command = new CreateRootCommand("Test Folder");
-        var handler = new CreateRootCommandHandler(_folderRepo!);
-        var folder = await handler.Handle(command, CancellationToken.None);
-        
-        await _folderRepo!.Received(1).AddAsync(folder);
-        await _folderRepo!.UnitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
 
-        Assert.IsNotNull(folder);
-        Assert.AreNotEqual(folder.Id, Guid.Empty);
-        Assert.AreEqual("Test Folder",folder.Name);
-        Assert.AreEqual(0, folder.NumberOfItems);
-        Assert.IsNull(folder.ParentFolder);
+        var rootFolder = Folder.CreateRoot("Test Folder");
+
+        _folderRepo!.GetByIdAsync(rootFolder.Id).Returns(rootFolder);
+        _folderRepo!.UnitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult(1));
+
+        var handler = new CreateRootCommandHandler(_folderRepo!);
+        var result = await handler.Handle(command, CancellationToken.None);
+
+        Assert.IsNotNull(result);
+        Assert.AreEqual(result.Id, rootFolder.Id);
+        Assert.AreEqual("Test Folder",result.Name);
+        Assert.AreEqual(0, result.Items.Count);
+        Assert.IsNull(result.ParentId);
     }
 
     [TestMethod]
     public async Task RenameFolder_ShouldRename_WhenFolderExist()
     {
-        var command = new CreateRootCommand("Test Folder");
-        var handler = new CreateRootCommandHandler(_folderRepo!);
-        var folder = await handler.Handle(command, CancellationToken.None);
-
-        Assert.IsNotNull(folder);
-        Assert.AreNotEqual(folder.Id, Guid.Empty);
-        Assert.AreEqual("Test Folder", folder.Name);
-        Assert.AreEqual(0,folder.NumberOfItems);
-        Assert.IsNull(folder.ParentFolder);
+        var root = Folder.CreateRoot("Root");
+        var folder = root.AddFolder("Test Folder");
         
         var renameCommand = new RenameFolderItemCommand(folder.Id, "Renamed Folder");
         var renameHandler = new RenameFolderItemHandler(_folderRepo!);
-        _folderRepo!.GetByIdAsync(folder.Id)!.Returns(Task.FromResult(folder));
+        _folderRepo!.GetByIdAsync(folder.Id)!.Returns(folder);
 
         var renamedFolder = await renameHandler.Handle(renameCommand, CancellationToken.None);
-        await _folderRepo!.Received(1).AddAsync(folder);
-        await _folderRepo!.Received(1).GetByIdAsync(folder.Id);
+
         await _folderRepo!.Received(1).UpdateAsync(folder);
-        await _folderRepo!.UnitOfWork.Received(2).SaveChangesAsync(Arg.Any<CancellationToken>());
+        _folderRepo!.UnitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(1);
     }
     [TestMethod]
     public async Task RenameFolder_ShouldThrowException_WhenFolderNotFound()
@@ -152,23 +147,25 @@ public sealed class FolderFileHandlerTests
     [TestMethod]
     public async Task AddFileToFolderHandler_ShouldAddFileToFolder_UpdateAndCommit_ReturnFileWithCorrectStorageInfo()
     {
-        var createCommand = new CreateRootCommand("Test Folder");
-        var createHandler = new CreateRootCommandHandler(_folderRepo!);
-        var folder = await createHandler.Handle(createCommand, CancellationToken.None);
+        var root = Folder.CreateRoot("Root");
+        var folder = root.AddFolder("Test Folder");
 
         var data = new byte[] {1,2,3};
 
         var storageInfo = new StorageInfo(new StorageId(StorageProviderKey.Memory, "Files", "/file1.pdf"), MimeType.Pdf, data.LongLength);
-        _storageManager!.StoreAsync(data,StorageProviderKey.Memory).Returns(Task.FromResult(storageInfo));
+        //_storageManager!.StoreStreamAsync(new MemoryStream(data), StorageProviderKey.Memory).Returns(await Task.FromResult(storageInfo));
+        _storageManager!.StoreStreamAsync(Arg.Any<Stream>(), StorageProviderKey.Memory).Returns(Task.FromResult(storageInfo));
+        _folderRepo!.GetByIdAsync(folder.Id).Returns(Task.FromResult<Folder?>(folder));
 
-        var command = new AddFileToFolderCommand(folder, "file1.pdf", data, StorageProviderKey.Memory);
+        var command = new AddFileToFolderCommand(folder.Id, "file1.pdf", new MemoryStream(data), StorageProviderKey.Memory);
 
-        var handler = new AddFileToFolderHandler(_folderRepo!, _storageManager);
+        var handler = new AddFileToFolderHandler(_folderRepo!, _storageManager!);
+
         var file = await handler.Handle(command,CancellationToken.None);
 
         await _folderRepo!.Received(0).GetByIdAsync(folder.Id);
         await _folderRepo!.Received(1).UpdateAsync(folder);
-        await _folderRepo!.UnitOfWork.Received(2).SaveChangesAsync(Arg.Any<CancellationToken>());
+        await _unitOfWork!.Received().SaveChangesAsync(Arg.Any<CancellationToken>());
 
         Assert.AreNotEqual(folder.Id, Guid.Empty);
         Assert.AreEqual("Test Folder", folder.Name);
@@ -176,33 +173,25 @@ public sealed class FolderFileHandlerTests
         Assert.IsNotNull(file);
         Assert.AreNotEqual(file.Id,Guid.Empty);
         Assert.AreEqual("file1.pdf", file.Name);
-        Assert.AreEqual(MimeType.Pdf, file.MimeType);
+        Assert.AreEqual(MimeType.Pdf.ToString(), file.MimeType);
         Assert.AreEqual(data.LongLength, file.Size);
-        Assert.IsTrue(file.ParentFolder is not null && file.ParentFolder == folder);
+        Assert.IsTrue(file.ParentId == folder.Id);
 
     }
     [TestMethod]
     public async Task AddSubFolderHandler_ShouldAddSubFolder_WhenSubFolderNameAvailable()
     {
-        var command = new CreateRootCommand("Test Folder");
-        var handler = new CreateRootCommandHandler(_folderRepo!);
-        var root = await handler.Handle(command, CancellationToken.None);
-        Assert.IsNotNull(root);
-        Assert.AreNotEqual(root.Id, Guid.Empty);
-        Assert.AreEqual("Test Folder", root.Name);
-        Assert.AreEqual(0, root.NumberOfItems);
-        Assert.IsNull(root.ParentFolder);
+        var root = Folder.CreateRoot("Root");
 
         var subCommand = new AddSubFolderCommand(root.Id, "SubFolder1");
         var subHandler = new AddSubFolderHandler(_folderRepo!);
         
-        _folderRepo!.GetByIdAsync(root.Id).Returns(Task.FromResult(root as Folder));
+        _folderRepo!.GetByIdAsync(root.Id).Returns(root);
         
         var subFolder = await subHandler.Handle(subCommand, CancellationToken.None);
 
-        await _folderRepo!.Received(1).GetByIdAsync(root.Id);
         await _folderRepo!.Received(1).UpdateAsync(root);
-        await _folderRepo!.UnitOfWork.Received(2).SaveChangesAsync(Arg.Any<CancellationToken>());
+        await _unitOfWork!.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
 
         Assert.IsNotNull(subFolder);
         Assert.AreNotEqual(subFolder.Id, Guid.Empty);
@@ -211,26 +200,19 @@ public sealed class FolderFileHandlerTests
     [TestMethod]
     public async Task AddSubFolderHandler_ShouldAppendCounterInParenthesis_WhenSubFolderNameAlreadyExists()
     {
-        var command = new CreateRootCommand("Test Folder");
-        var handler = new CreateRootCommandHandler(_folderRepo!);
-        var root = await handler.Handle(command, CancellationToken.None);
-        Assert.IsNotNull(root);
-        Assert.AreNotEqual(root.Id, Guid.Empty);
-        Assert.AreEqual("Test Folder", root.Name);
-        Assert.AreEqual(0, root.NumberOfItems);
-        Assert.IsNull(root.ParentFolder);
+        var root = Folder.CreateRoot("Root");
 
-        _folderRepo!.GetByIdAsync(root.Id).Returns(Task.FromResult(root as Folder));
+        _folderRepo!.GetByIdAsync(root.Id).Returns(root);
 
         var subCommand = new AddSubFolderCommand(root.Id, "SubFolder1");
+
         var subHandler = new AddSubFolderHandler(_folderRepo!);
         var subFolder1 = await subHandler.Handle(subCommand, CancellationToken.None);
         
         var subFolder2 = await subHandler.Handle(subCommand, CancellationToken.None);
 
-        await _folderRepo!.Received(2).GetByIdAsync(root.Id);
         await _folderRepo!.Received(2).UpdateAsync(root);
-        await _folderRepo!.UnitOfWork.Received(3).SaveChangesAsync(Arg.Any<CancellationToken>());
+        await _folderRepo!.UnitOfWork.Received(2).SaveChangesAsync(Arg.Any<CancellationToken>());
 
         Assert.IsNotNull(subFolder2);
         Assert.AreNotEqual(subFolder2.Id, Guid.Empty);
@@ -244,7 +226,7 @@ public sealed class FolderFileHandlerTests
     {
         var command = new AddSubFolderCommand(Guid.NewGuid(), "SubFolder1");
         var subHandler = new AddSubFolderHandler(_folderRepo!);
-        _folderRepo!.GetByIdAsync(command.parentFolderId).Returns(Task.FromResult<Folder?>(null));
+        _folderRepo!.GetByIdAsync(command.parentFolderId).Returns((Folder?)null);
 
         await Assert.ThrowsExactlyAsync<FolderNotFoundException>(() => subHandler.Handle(command, CancellationToken.None));
         

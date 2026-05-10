@@ -1,13 +1,13 @@
-﻿using Folders.API.Mappers;
-using Folders.API.Models;
-using Folders.Application.UseCases.GetFolders;
+﻿using Folders.Application.UseCases.GetFolders;
 using Folders.Application.UseCases.AddSubFolder;
 using Folders.Application.UseCases.CreateRoot;
 using Folders.Application.UseCases.GetFolderById;
-using Folders.Contracts;
+using Folders.Application.UseCases.GetFolderByPath;
+using Folders.Application.DTOs;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Folders.Application.UseCases.RenameFolder;
+using System.Web;
 
 namespace Folders.API.Controllers;
 
@@ -32,7 +32,7 @@ public class FoldersController : ControllerBase
         var command = new CreateRootCommand(name);
         var folder = await _mediator.Send(command);
 
-        return CreatedAtAction(nameof(GetFolderById), new { id = folder.Id }, folder.ToDto());
+        return CreatedAtAction(nameof(GetFolderById), new { id = folder.Id }, folder);
     }
     
     [HttpGet("{id:guid}", Name = "GetFolderById")]
@@ -71,16 +71,37 @@ public class FoldersController : ControllerBase
     }
 
     [HttpPut("{id:guid}", Name = "RenameFolderItem")]
-    public async Task<IActionResult> RenameFolderItem(Guid id, [FromBody] RenameFolderItemRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> RenameFolderItem(Guid id, string newName, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(request.NewName))
+        if (string.IsNullOrWhiteSpace(newName))
             return BadRequest("New name is required.");
-        var command = new RenameFolderItemCommand(id, request.NewName);
+        var command = new RenameFolderItemCommand(id, newName);
         var folderItem = await _mediator.Send(command, cancellationToken);
         if (folderItem is null)
             return NotFound();
         return Ok(folderItem.ToDto());
     }
 
+    [HttpGet("{*folderPath}", Name = "GetFolderByPath")]
+    public async Task<ActionResult<FolderDto>> GetFolderByPath(string folderPath, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(folderPath))
+            return BadRequest("Path cannot be null or empty.");
+
+        // URL decode the path
+        string decodedPath = HttpUtility.UrlDecode(folderPath);
+
+        // Prevent path traversal attacks (e.g., ../../etc/passwd)
+        if (decodedPath.Contains("..") || decodedPath.Contains("\\"))
+            return BadRequest("Invalid path: path traversal is not allowed.");
+
+        var query = new GetFolderByPathQuery(decodedPath);
+        var result = await _mediator.Send(query, cancellationToken);
+
+        if (!result.Found)
+            return NotFound($"Folder not found at path: {decodedPath}");
+
+        return Ok(result.Folder);
+    }
 
 }
