@@ -4,4 +4,4 @@ using File = Folders.Core.Aggregates.File;
 
 namespace Folders.Application.UseCases.GetFileFromFolder;
 
-public record GetFileFromFolderCommand(Folder Folder, Guid FileId, bool IncludingData) : IRequest<GetFileFromFolderResult>;
+public record GetFileFromFolderCommand(Guid FolderId, Guid FileId, bool IncludingData) : IRequest<GetFileFromFolderResult>;

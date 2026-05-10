@@ -1,7 +1,7 @@
 ﻿@using Folders.Contracts
 @using Folders.UI.Components.Config
 @using Folders.UI.ViewModels
-@inject Folders.UI.services.FoldersApiClient client
+@inject Folders.UI.Services.FoldersApiClient client
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
 
@@ -336,6 +336,7 @@
         if (found != null)
             CurrentFolder = found;
     }
+    
     private async Task ConfirmAddSubFolder()
     {
         if (string.IsNullOrWhiteSpace(newFolderName)) return;
@@ -366,6 +367,7 @@
         else if (e.Key == "Escape")
             CancelAddSubFolder();
     }
+
     private void OpenRenameModal(FolderViewModel folder)
     {
         folderToRename = folder;

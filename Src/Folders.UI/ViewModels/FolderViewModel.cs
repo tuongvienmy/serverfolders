@@ -1,4 +1,4 @@
-﻿using Folders.Contracts;
+﻿using Folders.Application.DTOs;
 
 namespace Folders.UI.ViewModels;
 

@@ -3,7 +3,7 @@ public record StorageInfo
 {
     public StorageId StorageId { get; private set; }
     public MimeType MimeType { get; private set; }
-    public long Size { get; set; }
+    public long Size { get; private set; }
 
     public StorageInfo(StorageId storageId, MimeType mimeType, long size)
     {

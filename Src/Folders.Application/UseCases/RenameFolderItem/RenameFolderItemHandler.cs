@@ -22,7 +22,7 @@ public class RenameFolderItemHandler : IRequestHandler<RenameFolderItemCommand, 
         }
 
         folderItem.Rename(request.NewName);
-        _folderRepo.UpdateAsync(folderItem);
+        await _folderRepo.UpdateAsync(folderItem);
         await _folderRepo.UnitOfWork.SaveChangesAsync(cancellationToken);
 
         return folderItem;

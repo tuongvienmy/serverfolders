@@ -22,7 +22,7 @@ public readonly struct MimeType : IComparable, IEquatable<MimeType>
         Value = value.ToLowerInvariant(); // Normalize
     }
 
-    public static readonly MimeType Empty = new MimeType("application/x-empty");
+    public static readonly MimeType Empty = new("application/x-empty");
     public bool IsEmpty => Value == "application/x-empty";
 
     public override string ToString() => Value;

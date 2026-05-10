@@ -16,7 +16,7 @@ public abstract class FolderItem: Entity
     public string Name { get; set; }    
     public Folder? ParentFolder { get; set; }
     public Guid? ParentFolderId { get; set; }  // Foreign key for the parent FolderItem 
-    public Dictionary<string, string> Metadata { get; set; } = [];
+    public Dictionary<string, string> Metadata { get; set; } = new Dictionary<string,string>();
     public bool IsDeleted { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime ModifiedAt { get; set; }    
@@ -24,7 +24,7 @@ public abstract class FolderItem: Entity
     public void Rename(string newName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(newName, nameof(newName));
-        if (ParentFolder != null && ParentFolder.Items.Any(i => i.Name == newName))
+        if (ParentFolder is not null && ParentFolder.Items.Any(i => i.Name == newName))
             throw new InvalidOperationException("Name already exists in parent");
         
         var oldName = Name;

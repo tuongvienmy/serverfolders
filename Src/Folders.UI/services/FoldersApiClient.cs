@@ -4,8 +4,9 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.JSInterop;
+using Folders.Application.DTOs;
 
-namespace Folders.UI.services;
+namespace Folders.UI.Services;
 
 public class FoldersApiClient
 {

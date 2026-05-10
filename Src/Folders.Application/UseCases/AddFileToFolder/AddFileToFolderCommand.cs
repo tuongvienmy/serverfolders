@@ -1,7 +1,8 @@
-﻿using Folders.Core.Values;
+﻿using Folders.Application.DTOs;
+using Folders.Core.Values;
 using MediatR;
 
 namespace Folders.Application.UseCases.AddFileToFolder;
-public record AddFileToFolderCommand(Core.Aggregates.Folder Folder, string FileName, byte[] Data, StorageProviderKey StorageProviderKey): IRequest<Core.Aggregates.File>;
+public record AddFileToFolderCommand(Guid FolderId, string FileName, Stream Data, StorageProviderKey StorageProviderKey): IRequest<FileDto>;
 
 

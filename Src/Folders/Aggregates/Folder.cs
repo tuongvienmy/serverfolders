@@ -6,7 +6,7 @@ namespace Folders.Core.Aggregates;
 
 public class Folder : FolderItem, IAggregateRoot
 {
-    protected readonly List<FolderItem> _items = [];
+    protected readonly List<FolderItem> _items = new List<FolderItem>();
 
     private Folder(string name) : base(name)
     {
@@ -21,10 +21,10 @@ public class Folder : FolderItem, IAggregateRoot
     public IReadOnlyCollection<FolderItem> Items => _items;
 
     [NotMapped]
-    public IReadOnlyCollection<File> Files => [.. _items.OfType<File>()];
+    public IReadOnlyCollection<File> Files => _items.OfType<File>().ToList();
 
     [NotMapped]
-    public IReadOnlyCollection<Folder> SubFolders => [.. _items.OfType<Folder>()];
+    public IReadOnlyCollection<Folder> SubFolders => _items.OfType<Folder>().ToList();
 
     /// <summary>
     /// Add a subfolder to this folder.
@@ -55,15 +55,10 @@ public class Folder : FolderItem, IAggregateRoot
 
         return file;
     }
-    
-    public File AddFile(string fileName)
-    {
-        return AddFile(fileName, StorageInfo.Empty);
-    }
 
     public FolderItem? Get(string name)
     {
-        return _items.FirstOrDefault(i => i.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+        return _items.FirstOrDefault(i => i.Name.Equals(name.Trim(), StringComparison.OrdinalIgnoreCase));
     }
 
     public IEnumerable<FolderItem> FindAll(string nameFilter, bool partialMatch = false, Type? typeFilter = null)
@@ -91,7 +86,7 @@ public class Folder : FolderItem, IAggregateRoot
     /// <summary>
     /// Load initial set of items. Should only be called once.
     /// </summary>
-    public void LoadItems(ICollection<FolderItem> items)
+    public void LoadItems(IEnumerable<FolderItem> items)
     {
         if (_items.Count > 0)
             throw new InvalidOperationException("LoadItems can only be called once, after creation.");
@@ -105,7 +100,7 @@ public class Folder : FolderItem, IAggregateRoot
     public bool RemoveItem(string name)
     {
         var item = Get(name);
-        if (item == null)
+        if (item is null)
             return false;
 
         _items.Remove(item);
@@ -113,6 +108,20 @@ public class Folder : FolderItem, IAggregateRoot
         item.ParentFolderId = null;
         ModifiedAt = DateTime.UtcNow;
         return true;
+    }
+
+    /// <summary>
+    /// Gets the full path of this folder by traversing up the parent hierarchy.
+    /// </summary>
+    [NotMapped]
+    public FolderPath Path
+    {
+        get
+        {
+            if (ParentFolder is null)
+                return (FolderPath)Name;
+            return ParentFolder.Path / Name;
+        }
     }
 
     // Helpers
@@ -133,6 +142,8 @@ public class Folder : FolderItem, IAggregateRoot
         file.ParentFolder = this;
         file.ParentFolderId = this.Id;
         _items.Add(file);
-        ModifiedAt = DateTime.UtcNow;
+
+        if (ModifiedAt == DateTime.MinValue)
+            ModifiedAt = DateTime.UtcNow;
     }
 }

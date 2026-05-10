@@ -26,16 +26,13 @@ public class MoveFileToStorageHandler : IRequestHandler<MoveFileToStorageCommand
         if (file.StorageId.Provider == targetStorageProviderKey)
             return file;
 
-        var data = await _storageManager.RetrieveAsync(file.StorageId)
-           .ContinueWith(async data =>
-           {
-               var storageInfo = await _storageManager.StoreAsync(data.Result, targetStorageProviderKey);
-               await _storageManager.DeleteAsync(file.StorageId);
-               file.ApplyStorageInfo(storageInfo);
-           });
+        var data = await _storageManager.RetrieveAsync(file.StorageId);
+        var storageInfo = await _storageManager.StoreAsync(data, targetStorageProviderKey);
+        await _storageManager.DeleteAsync(file.StorageId);
+        file.ApplyStorageInfo(storageInfo);
 
-        _folderRepo.UpdateAsync(folder);                                  // Update the folder to reflect the change in file storage.
-        await _folderRepo.UnitOfWork.SaveChangesAsync(cancellationToken); // Commit changes to the database.
+        await _folderRepo.UpdateAsync(folder);                                  // Update the folder to reflect the change in file storage.
+        await _folderRepo.UnitOfWork.SaveChangesAsync(cancellationToken);       // Commit changes to the database.
         return file;
     }
 }

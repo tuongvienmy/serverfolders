@@ -1,11 +1,8 @@
 using Folders.UI;
-using Folders.UI.services;
+using Folders.UI.Services;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.JSInterop;
-using System.Net.Http.Json;
-using System.Text.Json;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 
